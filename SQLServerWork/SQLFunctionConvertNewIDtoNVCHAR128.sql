@@ -1,0 +1,16 @@
+﻿IF OBJECT_ID('dbo.NewIDToNVCHAR128') IS NOT NULL
+DROP FUNCTION dbo.NewIDToNVCHAR128
+GO
+
+
+CREATE FUNCTION dbo.NewIDToNVCHAR128 (
+@newID uniqueidentifier
+)
+RETURNS nvarchar(128)
+AS
+BEGIN
+	DECLARE @retVal nvarchar(128)
+	SET @retVal = LOWER(REPLACE(CONVERT(nvarchar(128),@newID),'-',''))
+	RETURN @retVal
+END
+GO
