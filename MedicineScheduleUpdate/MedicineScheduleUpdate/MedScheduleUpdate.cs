@@ -9,12 +9,12 @@ namespace Aashirvadam.BatchUpdates
 {
     class MedScheduleUpdate
     {
-        private readonly string FrequencyPattern;
+        private readonly string Frequency;
         private readonly string Timezone;
         private ILogger Log;
-        public MedScheduleUpdate(string FrequencyPattern, string Timezone, ILogger log)
+        public MedScheduleUpdate(string Frequency, string Timezone, ILogger log)
         {
-            this.FrequencyPattern = FrequencyPattern;
+            this.Frequency = Frequency;
             this.Timezone = Timezone;
             this.Log = log;
         }
@@ -23,7 +23,8 @@ namespace Aashirvadam.BatchUpdates
             string curConnStringVariable = String.Empty;
             SqlConnection con = null;
             SqlCommand cmd = null;
-            string[] connStringVariable = { "DBConnectionStringProd", "DBConnectionStringDev" };
+            //string[] connStringVariable = { "DBConnectionStringProd", "DBConnectionStringDev" };
+            string[] connStringVariable = { "DBConnectionStringDev" };
             for (int i = 0; i < connStringVariable.Length; i++)
             {
                 try
@@ -38,7 +39,7 @@ namespace Aashirvadam.BatchUpdates
                     cmd.Parameters.AddWithValue("@TimeZone", Timezone);
                     cmd.Parameters.Add("@DateToday", SqlDbType.Date);
                     cmd.Parameters["@DateToday"].Value = DateTime.Now;
-                    cmd.Parameters.AddWithValue("@FrequencyPattern", FrequencyPattern);
+                    cmd.Parameters.AddWithValue("@FrequencyPattern", Frequency);
                     cmd.Parameters.Add("@errFlag", SqlDbType.Bit);
                     cmd.Parameters.Add("@errMessage", SqlDbType.NVarChar, 4000);
                     cmd.Parameters["@errFlag"].Direction = ParameterDirection.Output;
@@ -49,14 +50,14 @@ namespace Aashirvadam.BatchUpdates
                     if (((bool)cmd.Parameters["@errFlag"].Value))
                     {
                         Log.LogError("Error from stored procedure execution: ");
-                        Log.LogError($"Time: {DateTime.Now}  Timezone: {Timezone}  FrequencyPattern: {FrequencyPattern}");
+                        Log.LogError($"Time: {DateTime.Now}  Timezone: {Timezone}  Frequency: {Frequency}");
                         Log.LogError(cmd.Parameters["@errMessage"].Value.ToString());
                     }
                     //  }
                 }
                 catch (Exception e)
                 {
-                    Log.LogError($"Error in TaskUpdate.update(): FrequencyPattern: {FrequencyPattern} Timezone: {Timezone} DB: {curConnStringVariable}");
+                    Log.LogError($"Error in TaskUpdate.update(): Frequency: {Frequency} Timezone: {Timezone} DB: {curConnStringVariable}");
                     Log.LogError(e.Message);
                     Log.LogError(e.StackTrace);
                 }

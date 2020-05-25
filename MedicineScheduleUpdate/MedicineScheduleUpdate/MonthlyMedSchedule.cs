@@ -11,11 +11,11 @@ namespace Aashirvadam.BatchUpdates
         public static void Run([TimerTrigger("0 10 2 1 * *")]TimerInfo myTimer, ILogger log)
         // Website_Time_Zone is set to India Standard Time
         {
-            string frequencyPattern = "MONTHLY";
+            string frequency = "MONTHLY";
             string timezone = "+05:30";
             try
             {
-                MedScheduleUpdate medScheduleUpdate = new MedScheduleUpdate(frequencyPattern, timezone, log);
+                MedScheduleUpdate medScheduleUpdate = new MedScheduleUpdate(frequency, timezone, log);
                 medScheduleUpdate.Update();
             }
             catch(Exception e)

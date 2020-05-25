@@ -23,7 +23,8 @@ namespace Aashirvadam.BatchUpdates
             string curConnString = String.Empty, connDB = String.Empty;
             SqlConnection con = null;
             SqlCommand cmd = null;
-            string[] connString = { "DBConnectionStringProd", "DBConnectionStringDev" };
+            //string[] connString = { "DBConnectionStringProd", "DBConnectionStringDev" };
+            string[] connString = { "DBConnectionStringDev" };
             for (int i = 0; i < connString.Length; i++)
             {
                 try

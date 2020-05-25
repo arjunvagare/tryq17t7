@@ -1,10 +1,10 @@
 ﻿
-IF OBJECT_ID('dbo.MedScheduleUpdateOnCreate') IS NOT NULL
-DROP PROCEDURE dbo.MedScheduleUpdateOnCreate
+IF OBJECT_ID('dbo.ParenTaskUpdateOnCreate') IS NOT NULL
+DROP PROCEDURE dbo.ParenTaskUpdateOnCreate
 GO
 
-CREATE PROCEDURE dbo.MedScheduleUpdateOnCreate 
-	@MedicineScheduleID nvarchar(128),
+CREATE PROCEDURE dbo.ParenTaskUpdateOnCreate 
+	@ParentTaskID nvarchar(128),
     @Frequency nvarchar(15),
 --    @TimeZone smallint,
 	@errFlag bit OUTPUT,
@@ -13,13 +13,13 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	SET @errFlag = 0
-	SET @errMessage = 'Medicine Schedule Update'
+	SET @errMessage = 'Parent Task Update'
 	declare @DateToday date
 	declare @TimeZone smallint
 	set @TimeZone = 530; --Set to currently Indian Time Zone
 	begin transaction
 	begin try
-		set @DateToday = convert(date, dateadd(minute,@TimeZone%100, dateadd(hour,floor(@TimeZone/100),getdate()))) 
+		set @DateToday = convert(date, dateadd(minute,@TimeZone%100,dateadd(hour,floor(@TimeZone/100),getdate())) ) 
 		declare @StartDate date, @EndDate date, @AllTime bit
 		declare @FrequencyPattern nvarchar(128)
 		declare @FrequencyDayNum tinyint
@@ -27,28 +27,29 @@ BEGIN
 		declare @DaysPast tinyint, @CustRem tinyint
 
 		SELECT @StartDate = StartDate, @EndDate = EndDate, @AllTime = AllTime, @FrequencyPattern = FrequencyPattern
-		FROM dbo.MedicineSchedule
-		WHERE Id = @MedicineScheduleID
+		FROM dbo.ParentTask
+		WHERE Id = @ParentTaskID
 
 		if @Frequency='Daily'  
 		begin 
 			if @StartDate <= @DateToday
 			begin
-				INSERT INTO dbo.MedicineScheduleUpdate (Id,ParentId,MedicineId,MedicineScheduleId,
-				Dosage,DosageUnit,TimeOfDay,[Time],Cibum,Purpose,Photo,[Date],IsActive, Frequency)
-				SELECT dbo.NewIDToNVCHAR128(NEWID()), m.ParentID, m.MedicineID, @MedicineScheduleID, m.Dosage, m.DosageUnit, 
-				m.TimeOfDay, m.[Time], m.Cibum, m.Purpose, m.Photo, @DateToday, 1, m.Frequency
-				FROM dbo.MedicineSchedule m
-				WHERE m.Id = @MedicineScheduleID
-				UPDATE dbo.MedicineSchedule 
+				INSERT INTO dbo.ParentTaskUpdate (Id,ParentId,MasterTaskId, ParentTaskId, Name, [Type], Icon, 
+				TimeOfDay,[Time],[Date],IsActive, Frequency, SlotStartTime, Description)
+				SELECT dbo.NewIDToNVCHAR128(NEWID()), p.ParentID, p.MasterTaskId, @ParentTaskID, p.Name, p.[Type], p.Icon,
+				p.TimeOfDay, p.[Time], @DateToday, 1, p.Frequency, p.SlotStartTime, p.Description
+				FROM dbo.ParentTask p
+				WHERE p.Id = @ParentTaskID
+
+				UPDATE dbo.ParentTask 
 				SET LastXDate=@DateToday
-				WHERE Id=@MedicineScheduleID				
+				WHERE Id=@ParentTaskID				
 			end
 			else
 			begin
-				UPDATE dbo.MedicineSchedule 
+				UPDATE dbo.ParentTask 
 				SET LastXDate=dateadd(day, -1, @StartDate)
-				WHERE Id=@MedicineScheduleID
+				WHERE Id=@ParentTaskID				
 			end
 		end
 		else if @Frequency='Custom' 
@@ -56,9 +57,9 @@ BEGIN
 			set @FrequencyDayNum=cast(@FrequencyPattern as tinyint)
 			if @StartDate > @DateToday
 			begin
-				UPDATE dbo.MedicineSchedule 
+				UPDATE dbo.ParentTask 
 				SET LastXDate=DateAdd(day, (0-@FrequencyDayNum), @StartDate)
-				WHERE Id=@MedicineScheduleID				
+				WHERE Id=@ParentTaskID				
 			end
 			else
 			begin
@@ -66,22 +67,22 @@ BEGIN
 				Set @CustRem = @DaysPast % @FrequencyDayNum
 				if @CustRem = 0 and (@AllTime > 0 or @DateToday <= @EndDate)
 				begin
-					INSERT INTO dbo.MedicineScheduleUpdate (Id,ParentId,MedicineId,MedicineScheduleId,
-					Dosage,DosageUnit,TimeOfDay,[Time],Cibum,Purpose,Photo,[Date],IsActive,Frequency)
-					SELECT dbo.NewIDToNVCHAR128(NEWID()), ParentID, MedicineID, @MedicineScheduleID, Dosage, DosageUnit, 
-					TimeOfDay, [Time], Cibum, Purpose, Photo, @DateToday, 1, Frequency
-					FROM dbo.MedicineSchedule 
-					WHERE Id = @MedicineScheduleID
+					INSERT INTO dbo.ParentTaskUpdate (Id,ParentId,MasterTaskId, ParentTaskId, Name, [Type],Icon,
+					TimeOfDay,[Time],[Date],IsActive,Frequency, SlotStartTime, Description)
+					SELECT dbo.NewIDToNVCHAR128(NEWID()), ParentID, MasterTaskId, @ParentTaskID, Name, [Type],Icon,
+					TimeOfDay, [Time], @DateToday, 1, Frequency, SlotStartTime, Description
+					FROM dbo.ParentTask 
+					WHERE Id = @ParentTaskID
 					
-					UPDATE dbo.MedicineSchedule 
+					UPDATE dbo.ParentTask 
 					SET LastXDate=@DateToday
-					WHERE Id=@MedicineScheduleID				
+					WHERE Id=@ParentTaskID				
 				end
 				else
 				begin
-					UPDATE dbo.MedicineSchedule 
+					UPDATE dbo.ParentTask 
 					SET LastXDate=DateAdd(day, (0-@CustRem), @DateToday)
-					WHERE Id=@MedicineScheduleID				
+					WHERE Id=@ParentTaskID				
 				end
 			end
 		end
@@ -99,12 +100,11 @@ BEGIN
 				set @CurrentPeriodStartDay = dateadd(day, 1, eomonth(@DateToday, -1))
 				set @MinusOnePeriodStartDay =  DateAdd(month, -1, @SchedulePeriodStartDay)
 			end
-			
 			if @SchedulePeriodStartDay > @CurrentPeriodStartDay 
 			begin
-				UPDATE dbo.MedicineSchedule 
+				UPDATE dbo.ParentTask 
 				SET LastXDate=@MinusOnePeriodStartDay
-				WHERE Id=@MedicineScheduleID				
+				WHERE Id=@ParentTaskID				
 			end
 			else
 			begin
@@ -115,24 +115,23 @@ BEGIN
 				WHILE @@FETCH_STATUS = 0
 				begin
 					set @DateNext = DATEADD(DAY,CAST(@cFreqDateString as tinyint),@CurrentPeriodStartDay)
-					if @DateNext >= @DateToday and @DateNext >= @StartDate and (@AllTime > 0 or @DateNext <= @EndDate)
+					if @DateNext >= @DateToday and @DateNext >= @StartDate
 					begin
-						INSERT INTO dbo.MedicineScheduleUpdate (Id,ParentId,MedicineId,MedicineScheduleId,
-						Dosage,DosageUnit,TimeOfDay,[Time],Cibum,Purpose,Photo,[Date],IsActive,Frequency)
-						SELECT dbo.NewIDToNVCHAR128(NEWID()), ParentID, MedicineID, @MedicineScheduleID, Dosage, DosageUnit, 
-						TimeOfDay, [Time], Cibum, Purpose, Photo, @DateNext , 1, Frequency
-						FROM dbo.MedicineSchedule 
-						WHERE Id = @MedicineScheduleID
+						INSERT INTO dbo.ParentTaskUpdate (Id,ParentId,MasterTaskId, ParentTaskId, Name, [Type],Icon,
+						TimeOfDay,[Time],[Date],IsActive,Frequency, SlotStartTime, Description)
+						SELECT dbo.NewIDToNVCHAR128(NEWID()), ParentID, MasterTaskId, @ParentTaskID, Name, [Type],Icon,
+						TimeOfDay, [Time], @DateNext , 1, Frequency, SlotStartTime, Description
+						FROM dbo.ParentTask 
+						WHERE Id = @ParentTaskID
 					end 
 					FETCH NEXT from FreqDateCursor INTO @cFreqDateString
 				END 
 				CLOSE FreqDateCursor
 				DEALLOCATE FreqDateCursor
 
-				UPDATE dbo.MedicineSchedule 
+				UPDATE dbo.ParentTask 
 				SET LastXDate=@CurrentPeriodStartDay
-				WHERE Id=@MedicineScheduleID				
-				
+				WHERE Id=@ParentTaskID				
 			end
 		end 
 		END TRY
